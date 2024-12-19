@@ -51,3 +51,71 @@ def parse_json(data):
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+
+@app.route('/health', methods=['GET'])
+def health():
+    return {'status':'ok'}, 200
+
+@app.route('/count', methods=['GET'])
+def count():
+    try:
+        return {'count': db.songs.count_documents({})}, 200
+    except:
+        return {'message': 'Unknown server error'}, 500
+
+@app.route('/song', methods=['GET'])
+def songs():
+    try:
+        return {'songs': json_util.dumps(db.songs.find({}))}, 200
+    except:
+        return {'message': 'Unknown server error'}, 500
+
+@app.route('/song/<int:id>', methods=['GET'])
+def get_song_by_id(id):
+    try:
+        song = db.songs.find_one({'id': id})
+        return json_util.dumps(song), 200
+    except:
+        return {'message': 'Unknown server error'}, 500
+
+@app.route('/song', methods=['POST'])
+def create_song():
+    try:
+        song = request.json
+        if db.songs.find_one({'id': song['id']}) is not None:
+            return {'message': f'song with id {song["id"]} ready present'}
+        id = db.songs.insert_one({'id': song['id'], 'lyrics': song['lyrics'], 'title': song['title']})
+        return {'inserted id': json_util.dumps(id.inserted_id)}, 201
+    except:
+        return {'message': 'Unknown server error'}, 500
+
+@app.route('/song/<int:id>', methods=['PUT'])
+def update_song(id):
+    try:
+        song_data = request.json
+
+        if db.songs.find_one({'id': id}) is None:
+            return {'message': 'song not found'}
+
+        new_values = {'lyrics': song_data['lyrics'], 'title': song_data['title']}
+        result = db.songs.update_one({'id': id}, {'$set': new_values})
+
+        if result.modified_count == 0:
+            return {'message': 'song found, but nothing updated'}, 200
+
+        song = db.songs.find_one(result.upserted_id)
+        return json_util.dumps(song), 201
+    except:
+        return {'message': 'Unknown server error'}, 500
+
+@app.route('/song/<int:id>', methods=['DELETE'])
+def delete_song(id):
+    try:
+        result = db.songs.delete_one({'id': id})
+        
+        if result.deleted_count == 0:
+            return {'message': 'song not found'}, 404
+
+        return {}, 204
+    except:
+        return {'message': 'Unknown server error'}, 500
