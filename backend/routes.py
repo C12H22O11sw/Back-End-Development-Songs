@@ -66,7 +66,7 @@ def count():
 @app.route('/song', methods=['GET'])
 def songs():
     try:
-        return {'songs': json_util.dumps(db.songs.find({}))}, 200
+        return {'songs': parse_json(list(db.songs.find({})))}, 200
     except:
         return {'message': 'Unknown server error'}, 500
 
